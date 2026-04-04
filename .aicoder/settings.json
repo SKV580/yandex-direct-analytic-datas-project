@@ -2,7 +2,11 @@
   "project_name": "template-for-new-project-with-tz-architecture",
   "ignore_patterns": [],
   "context_focus": [
-    ".aicoder"
+    ".aicoder",
+    "requirements.txt",
+    "yandex_direct_analyzer.py",
+    "out",
+    "README.txt.txt"
   ],
   "max_file_size_kb": 100
 }

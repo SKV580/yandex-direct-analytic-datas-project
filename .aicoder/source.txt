@@ -40,6 +40,67 @@
 <![CDATA[
 ...ПОЛНЫЙ, ОТРЕФАКТОРЕННЫЙ КОД...
 ]]>
+</file>
+<file path=".aicoder/settings.json">
+<![CDATA[
+{
+  "project_name": "template-for-new-project-with-tz-architecture",
+  "ignore_patterns": [],
+  "context_focus": [
+    ".aicoder",
+    "requirements.txt",
+    "yandex_direct_analyzer.py",
+    "out",
+    "README.txt.txt"
+  ],
+  "max_file_size_kb": 100
+}
+]]>
+</file>
+<file path=".aicoder/source.txt">
+<![CDATA[
+# PROMPT ДЛЯ МОДЕЛИ
+Ты — ассистент-разработчик, который анализирует проект и выполняет изменения в коде по запросу пользователя.
+
+---
+
+## КОНТЕКСТ ПРОЕКТА
+Вот XML-контекст файлов проекта:
+```xml
+<file path=".aicoder/prompt.md">
+<![CDATA[
+# PROMPT ДЛЯ МОДЕЛИ
+Ты — ассистент-разработчик, который анализирует проект и выполняет изменения в коде по запросу пользователя.
+
+---
+
+## КОНТЕКСТ ПРОЕКТА
+Вот XML-контекст файлов проекта:
+```xml
+{{FILES_XML}}
+```
+
+## ЗАДАНИЕ ПОЛЬЗОВАТЕЛЯ
+{{TASK}}
+
+---
+
+## ТВОЯ ЗАДАЧА
+1. Проанализируй код и запрос пользователя.
+2. Определи, какие файлы нужно создать, изменить или удалить.
+3. Верни ответ строго в формате XML, заключённый в блок ```xml … ```.
+4. Для всех файлов с действием `write` указывай **полное содержимое файла**, без каких-либо сокращений.
+
+---
+
+## ФОРМАТ ОТВЕТА
+
+```xml
+<response>
+    <file_change action="write" path="frontend/src/components/ComplexComponent.tsx">
+<![CDATA[
+...ПОЛНЫЙ, ОТРЕФАКТОРЕННЫЙ КОД...
+]]>
     </file_change>
 
     <file_change action="write" path="frontend/src/hooks/useComplexLogic.ts">
@@ -160,3 +221,641 @@
 
 Используя контекст `КОНТЕКСТ ПРОЕКТА` и задание `ЗАДАНИЕ ПОЛЬЗОВАТЕЛЯ`,
 сгенерируй XML-ответ в описанном формате, содержащий только полные версии изменённых или новых файлов.
+]]>
+</file>
+<file path="README.txt.txt">
+<![CDATA[
+Скрипт выполняет Анализ отчета из файла Excel в папке data/, дает аналитику по результативности работы кампаний и рекомендации по их улучшению.
+
+Анализ отчётов Яндекс.Директ из Excel
+Скрипт на Python для автоматического анализа Excel‑отчётов из Яндекс.Директ: считает ключевые метрики (CPC, CPA, конверсия), строит сводки по кампаниям и основным срезам, выводит текстовый отчёт в терминал и формирует Excel‑файл с результатами.
+
+Возможности
+Чтение Excel‑отчёта из папки Data или по указанному пути.
+
+Автоматическое определение и нормализация колонок (расход, клики, конверсии и т.д.).
+
+Расчёт метрик:
+
+Расход, клики, конверсии.
+
+CPC (цена клика), CPA (цена конверсии).
+
+CR (конверсия из клика).
+
+Анализ по основным срезам:
+
+Кампания.
+
+Устройство.
+
+Пол.
+
+Возраст.
+
+Тип условия показа.
+
+Площадки (РСЯ/Мастер‑кампаний/Поиск/Динамическая/Смарт-баннеры/Товарная).
+
+Группы объявлений, заголовки, креативы, отказы, глубина просмотра, средняя позиция показа, средняя позиция клика, % охвата и т.п. (если есть в отчёте).
+
+Вывод краткого анализа и рекомендаций в терминал.
+
+Формирование итогового Excel‑файла с несколькими листами:
+
+Обзор по аккаунту.
+
+Детальный срез по кампаниям.
+
+Листы по каждому разрезу (устройства, пол, возраст, площадки и т.д.).
+
+Лист с рекомендациями.
+
+Требования
+Python 3.9+
+
+Рекомендуемые пакеты:
+
+pandas
+
+openpyxl
+
+numpy (по желанию)
+
+tabulate (для красивого вывода в терминале, опционально)
+
+Можно установить через requirements.txt:
+
+text
+pandas
+openpyxl
+numpy
+tabulate
+Установка
+Клонируй репозиторий или скопируй файлы проекта в отдельную папку.
+
+Создай и активируй виртуальное окружение (опционально, но желательно):
+
+bash
+python -m venv venv
+# Windows
+venv\Scripts\activate
+# macOS / Linux
+source venv/bin/activate
+Установи зависимости:
+
+bash
+pip install -r requirements.txt
+Создай структуру папок (если её ещё нет):
+
+bash
+Data/        # сюда кладём исходные отчёты Яндекс.Директ в формате .xlsx
+output/      # сюда будут сохраняться готовые отчёты с анализом
+yandex_direct_analyzer.py  # основной скрипт
+README.md
+Формат входного отчёта
+Скрипт рассчитан на Excel‑выгрузку из интерфейса Яндекс.Директ (статистика по кампаниям/группам/условиям показа). Желательно, чтобы в отчёте были следующие поля (названия можно адаптировать в коде):
+
+Название кампании
+
+Название группы
+
+Условие показа / Тип условия показа
+
+Название площадки / Площадка
+
+Устройство
+
+Пол
+
+Возраст
+
+Расход, ₽
+
+Клики
+
+Конверсии
+
+Дополнительные поля по необходимости (CTR, показы, отказ, глубина и т.п.)
+
+Если названия колонок отличаются, их следует привести к нужным в коде (в одном месте — словарь маппинга).
+
+Запуск
+Вариант 1. Взять первый файл из папки Data
+bash
+python yandex_direct_analyzer.py --input Data --output output/report.xlsx
+--input Data — папка, в которой лежит исходный Excel‑файл (скрипт возьмет первый найденный .xlsx).
+
+--output output/report.xlsx — путь к выходному файлу с анализом.
+
+Вариант 2. Указать конкретный файл
+bash
+python yandex_direct_analyzer.py --input Data/otchet_yandex_direct_2026-04-04.xlsx --output output/report_2026-04-04.xlsx
+Основные аргументы
+--input — путь к файлу или к папке с файлами.
+
+--output — путь к итоговому Excel‑файлу с анализом (будет создан или перезаписан).
+
+(Опционально) --min-spend — минимальный расход для попадания сегмента в рекомендации.
+
+(Опционально) --min-clicks — минимальное количество кликов для анализа сегмента.
+
+Пример:
+
+bash
+python yandex_direct_analyzer.py \
+  --input Data \
+  --output output/analysis_report.xlsx \
+  --min-spend 500 \
+  --min-clicks 20
+Логика анализа
+1. Загрузка и подготовка данных
+Чтение исходного Excel‑файла через pandas.read_excel.
+
+Приведение названий колонок к стандартному виду (например, через словарь, str.lower() и очистку пробелов).
+
+Приведение типов:
+
+Числовые поля (Расход, Клики, Конверсии) → float/int.
+
+Категориальные поля (Устройство, Пол, Возраст, Тип условия показа) → str.
+
+2. Расчёт базовых метрик
+Для каждой строки и каждого среза рассчитываются:
+
+CPC = расход / клики (если клики > 0).
+
+CPA = расход / конверсии (если конверсии > 0).
+
+CR = конверсии / клики.
+
+Дополнительно формируются агрегаты:
+
+Общий расход, клики, конверсии.
+
+Средний CPC, CPA, CR по аккаунту.
+
+Отдельные сводки по каждой кампании.
+
+3. Анализ по срезам
+Для каждого из разрезов (при наличии колонок):
+
+Кампания (Название кампании).
+
+Устройство (Устройство).
+
+Пол (Пол).
+
+Возраст (Возраст).
+
+Тип условия показа (Тип условия показа).
+
+Площадки (Название площадки/Площадка).
+
+Группы, заголовки, креативы и т.д.
+
+Строятся сводные таблицы вида:
+
+Расход.
+
+Клики.
+
+Конверсии.
+
+CPC.
+
+CPA.
+
+CR.
+
+4. Эвристика рекомендаций
+На основе агрегированных данных формируется текстовый список рекомендаций:
+
+Сегменты с высоким расходом и 0 конверсий → кандидаты на отключение/сильное урезание.
+
+Сегменты, где CPA сильно выше среднего по аккаунту → кандидаты на снижение ставок/отсечение.
+
+Сегменты, где CPA ниже среднего и есть достаточный объём кликов и конверсий → кандидаты на усиление.
+
+Сравнение кампаний между собой:
+
+Кампании с лучшим CPA и CR → базовые драйверы.
+
+Кампании с худшим CPA → требуют чистки и пересборки.
+
+Структура выходного Excel‑файла
+Итоговый Excel‑файл содержит несколько листов:
+
+Обзор:
+
+Общая статистика по аккаунту.
+
+Сводка по кампаниям.
+
+Краткие выводы (в свободной форме/текстом).
+
+Кампании:
+
+Таблица с метриками по каждой кампании.
+
+Рекомендации:
+
+Табличный список сегментов (кампания/срез) с пометками:
+
+«Усилить».
+
+«Сократить».
+
+«Проверить».
+
+Листы по срезам:
+
+Тип устройства
+
+Пол
+
+Возраст
+
+Тип условия показа
+
+Площадки
+
+и другие, в зависимости от данных.
+
+На таблицы можно навесить:
+
+Автофильтры.
+
+Формат числа для денег, процентов.
+
+Условное форматирование (например, подсветка дорогих CPA).
+
+Вывод в терминал
+При запуске скрипт печатает в консоль:
+
+Общую сводку по аккаунту (расход, клики, конверсии, CPC, CPA, CR).
+
+Таблицу по кампаниям (кратко).
+
+Несколько ключевых рекомендаций:
+
+Какие кампании/сегменты тянут эффективность вниз.
+
+Какие кампании/сегменты стоит усиливать.
+
+Вывод можно оформить через print() и, при желании, tabulate для красивых таблиц.
+
+Адаптация под свой код
+Обнови название основного файла скрипта в примерах (yandex_direct_analyzer.py → имя твоего файла).
+
+Приведи список ожидаемых колонок к тем, что реально есть в твоих выгрузках.
+
+Подстрой пороговые значения для рекомендаций:
+
+Минимальный объём трафика (клики/расход) для анализа сегмента.
+
+Допустимое отклонение CPA от среднего.
+
+
+]]>
+</file>
+<file path="requirements.txt">
+<![CDATA[
+# Зависимости проекта (минимальный набор)
+pandas>=2.0.0
+numpy>=1.26.0
+openpyxl>=3.1.0
+]]>
+</file>
+<file path="yandex_direct_analyzer.py">
+<![CDATA[
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import argparse
+import math
+import re
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+import numpy as np
+import pandas as pd
+from openpyxl import Workbook
+from openpyxl.formatting.rule import ColorScaleRule
+from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.table import Table, TableStyleInfo
+
+
+CANONICAL_COLUMNS = {
+    "campaign": [
+        "Название кампании", "Кампания", "campaign", "campaign name"
+    ],
+    "ad_group": [
+        "Название группы", "Группа", "Группа объявлений", "ad group"
+    ],
+    "placement": [
+        "Название площадки", "Площадка", "Site", "Placement"
+    ],
+    "device": [
+        "Тип устройства", "Устройство", "device"
+    ],
+    "gender": [
+        "Пол", "gender"
+    ],
+    "age": [
+        "Возраст", "age"
+    ],
+    "targeting_type": [
+        "Тип условия показа", "Условие показа", "targeting type"
+    ],
+    "title": [
+        "Заголовок", "Заголовок 1", "title"
+    ],
+    "image": [
+        "Изображение", "image"
+    ],
+    "spend": [
+        "Расход, ₽", "Расход", "Cost", "Spend"
+    ],
+    "clicks": [
+        "Клики", "Clicks"
+    ],
+    "conversions": [
+        "Конверсии", "Conversions"
+    ],
+    "impressions": [
+        "Показы", "Impressions"
+    ],
+    "bounce_rate": [
+        "Отказы, %", "Показатель отказов, %", "Bounce rate"
+    ],
+    "depth": [
+        "Глубина просмотра", "Depth"
+    ],
+}
+
+DIMENSIONS = [
+    ("campaign", "Кампания"),
+    ("device", "Устройство"),
+    ("gender", "Пол"),
+    ("age", "Возраст"),
+    ("targeting_type", "Тип условия показа"),
+    ("placement", "Площадка"),
+    ("ad_group", "Группа"),
+    ("title", "Заголовок"),
+    ("image", "Изображение"),
+]
+
+
+class AnalyzerError(Exception):
+    pass
+
+
+def normalize_text(s: str) -> str:
+    s = str(s).strip().lower()
+    s = s.replace("ё", "е")
+    s = re.sub(r"\s+", " ", s)
+    return s
+
+
+def find_column(df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
+    normalized_map = {normalize_text(c): c for c in df.columns}
+    for c in candidates:
+        if normalize_text(c) in normalized_map:
+            return normalized_map[normalize_text(c)]
+    return None
+
+
+def clean_numeric(series: pd.Series) -> pd.Series:
+    s = series.astype(str).str.replace("\u00a0", " ", regex=False)
+    s = s.str.replace("₽", "", regex=False)
+    s = s.str.replace("%", "", regex=False)
+    s = s.str.replace(" ", "", regex=False)
+    s = s.str.replace(",", ".", regex=False)
+    s = s.replace({"nan": np.nan, "None": np.nan, "": np.nan, "-": np.nan})
+    return pd.to_numeric(s, errors="coerce")
+
+
+def resolve_input(path_str: str) -> Path:
+    p = Path(path_str)
+    if p.is_file():
+        return p
+    if p.is_dir():
+        files = sorted([x for x in p.iterdir() if x.suffix.lower() in {".xlsx", ".xls"} and not x.name.startswith("~$")])
+        if not files:
+            raise AnalyzerError(f"В папке {p} не найдено Excel-файлов")
+        return files[0]
+    raise AnalyzerError(f"Путь не найден: {p}")
+
+
+def load_data(path: Path) -> pd.DataFrame:
+    try:
+        xls = pd.ExcelFile(path)
+    except Exception as e:
+        raise AnalyzerError(f"Не удалось открыть Excel-файл: {e}")
+    frames = []
+    for sheet in xls.sheet_names:
+        try:
+            df = pd.read_excel(path, sheet_name=sheet)
+            if not df.empty:
+                df["__sheet__"] = sheet
+                frames.append(df)
+        except Exception:
+            continue
+    if not frames:
+        raise AnalyzerError("Не удалось прочитать ни одного непустого листа")
+    return pd.concat(frames, ignore_index=True)
+
+
+def map_columns(df: pd.DataFrame) -> Dict[str, str]:
+    result = {}
+    for key, candidates in CANONICAL_COLUMNS.items():
+        col = find_column(df, candidates)
+        if col:
+            result[key] = col
+    required = ["campaign", "spend", "clicks", "conversions"]
+    missing = [k for k in required if k not in result]
+    if missing:
+        raise AnalyzerError(f"Не найдены обязательные колонки: {', '.join(missing)}")
+    return result
+
+
+def prepare_dataframe(df: pd.DataFrame, mapping: Dict[str, str]) -> pd.DataFrame:
+    work = pd.DataFrame()
+    for key, col in mapping.items():
+        work[key] = df[col]
+
+    for col in ["spend", "clicks", "conversions", "impressions", "bounce_rate", "depth"]:
+        if col in work.columns:
+            work[col] = clean_numeric(work[col])
+        else:
+            work[col] = np.nan
+
+    for col in ["campaign", "ad_group", "placement", "device", "gender", "age", "targeting_type", "title", "image"]:
+        if col not in work.columns:
+            work[col] = "Не указано"
+        work[col] = work[col].fillna("Не указано").astype(str).str.strip().replace({"": "Не указано"})
+
+    work["spend"] = work["spend"].fillna(0.0)
+    work["clicks"] = work["clicks"].fillna(0.0)
+    work["conversions"] = work["conversions"].fillna(0.0)
+    work["impressions"] = work["impressions"].fillna(0.0)
+
+    return work
+
+
+def add_metrics(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    df["cpc"] = np.where(df["clicks"] > 0, df["spend"] / df["clicks"], np.nan)
+    df["cpa"] = np.where(df["conversions"] > 0, df["spend"] / df["conversions"], np.nan)
+    df["cr"] = np.where(df["clicks"] > 0, df["conversions"] / df["clicks"], np.nan)
+    df["ctr"] = np.where(df["impressions"] > 0, df["clicks"] / df["impressions"], np.nan)
+    return df
+
+
+def summarize(df: pd.DataFrame, dim: str) -> pd.DataFrame:
+    agg = df.groupby(dim, dropna=False).agg(
+        spend=("spend", "sum"),
+        clicks=("clicks", "sum"),
+        conversions=("conversions", "sum"),
+        impressions=("impressions", "sum"),
+        bounce_rate=("bounce_rate", "mean"),
+        depth=("depth", "mean"),
+    ).reset_index()
+    agg["cpc"] = np.where(agg["clicks"] > 0, agg["spend"] / agg["clicks"], np.nan)
+    agg["cpa"] = np.where(agg["conversions"] > 0, agg["spend"] / agg["conversions"], np.nan)
+    agg["cr"] = np.where(agg["clicks"] > 0, agg["conversions"] / agg["clicks"], np.nan)
+    agg["ctr"] = np.where(agg["impressions"] > 0, agg["clicks"] / agg["impressions"], np.nan)
+    agg = agg.sort_values(["conversions", "spend"], ascending=[False, False]).reset_index(drop=True)
+    return agg
+
+
+def overall_metrics(df: pd.DataFrame) -> Dict[str, float]:
+    spend = df["spend"].sum()
+    clicks = df["clicks"].sum()
+    conv = df["conversions"].sum()
+    impr = df["impressions"].sum()
+    return {
+        "spend": spend,
+        "clicks": clicks,
+        "conversions": conv,
+        "impressions": impr,
+        "cpc": spend / clicks if clicks else np.nan,
+        "cpa": spend / conv if conv else np.nan,
+        "cr": conv / clicks if clicks else np.nan,
+        "ctr": clicks / impr if impr else np.nan,
+    }
+
+
+def fmt_money(x) -> str:
+    if pd.isna(x):
+        return "—"
+    return f"{x:,.2f} ₽".replace(",", " ")
+
+
+def fmt_num(x) -> str:
+    if pd.isna(x):
+        return "—"
+    return f"{int(round(x)):,}".replace(",", " ")
+
+
+def fmt_pct(x) -> str:
+    if pd.isna(x):
+        return "—"
+    return f"{x * 100:.2f}%"
+
+
+def best_and_worst(summary: pd.DataFrame, min_clicks: int, min_spend: float) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    eligible = summary[(summary["clicks"] >= min_clicks) | (summary["spend"] >= min_spend)].copy()
+    if eligible.empty:
+        return eligible, eligible
+    good = eligible[eligible["conversions"] > 0].sort_values(["cpa", "conversions"], ascending=[True, False]).head(5)
+    bad = eligible[(eligible["conversions"] == 0) | (eligible["cpa"] > eligible["cpa"].median())].sort_values(["conversions", "spend"], ascending=[True, False]).head(5)
+    return good, bad
+
+
+def campaign_recommendations(df: pd.DataFrame, campaign_summary: pd.DataFrame, min_clicks: int, min_spend: float) -> pd.DataFrame:
+    account_cpa = overall_metrics(df)["cpa"]
+    rows = []
+    for _, row in campaign_summary.iterrows():
+        camp = row["campaign"]
+        part = df[df["campaign"] == camp].copy()
+        recs = []
+
+        for dim, label in [("device", "устройствам"), ("gender", "полу"), ("age", "возрасту"), ("targeting_type", "типу условия показа"), ("placement", "площадкам")]:
+            s = summarize(part, dim)
+            good, bad = best_and_worst(s, min_clicks=min_clicks, min_spend=min_spend)
+            if not good.empty:
+                good_names = ", ".join(good[dim].astype(str).head(3).tolist())
+                recs.append(f"Усилить по {label}: {good_names}")
+            if not bad.empty:
+                bad_names = ", ".join(bad[dim].astype(str).head(3).tolist())
+                recs.append(f"Сократить по {label}: {bad_names}")
+
+        status = "усилить"
+        if pd.notna(row["cpa"]) and pd.notna(account_cpa):
+            if row["cpa"] > account_cpa * 1.5:
+                status = "сократить и пересобрать"
+            elif row["cpa"] > account_cpa * 1.15:
+                status = "оптимизировать"
+
+        rows.append({
+            "campaign": camp,
+            "spend": row["spend"],
+            "clicks": row["clicks"],
+            "conversions": row["conversions"],
+            "cpc": row["cpc"],
+            "cpa": row["cpa"],
+            "cr": row["cr"],
+            "status": status,
+            "recommendations": " | ".join(recs[:10]) if recs else "Недостаточно данных для рекомендаций",
+        })
+    return pd.DataFrame(rows).sort_values(["conversions", "spend"], ascending=[False, False])
+
+
+def print_terminal_report(df: pd.DataFrame, campaign_summary: pd.DataFrame, recs: pd.DataFrame) -> None:
+    totals = overall_metrics(df)
+    print("=" * 90)
+    print("АНАЛИЗ ОТЧЕТА ЯНДЕКС ДИРЕКТ")
+    print("=" * 90)
+    print(f"Расход: {fmt_money(totals['spend'])}")
+    print(f"Клики: {fmt_num(totals['clicks'])}")
+    print(f"Конверсии: {fmt_num(totals['conversions'])}")
+    print(f"CPC: {fmt_money(totals['cpc'])}")
+    print(f"CPA: {fmt_money(totals['cpa'])}")
+    print(f"CR: {fmt_pct(totals['cr'])}")
+    print()
+    print("КАМПАНИИ")
+    print("-" * 90)
+    cols = ["campaign", "spend", "clicks", "conversions", "cpc", "cpa", "cr"]
+    temp = campaign_summary[cols].copy()
+    temp["spend"] = temp["spend"].map(fmt_money)
+    temp["clicks"] = temp["clicks"].map(fmt_num)
+    temp["conversions"] = temp["conversions"].map(fmt_num)
+]]>
+</file>
+
+```
+
+## ЗАДАНИЕ ПОЛЬЗОВАТЕЛЯ
+проверь все файлы и сделай исправления, чтобы все заработало, сейчас крипт не запускается этой командой в powershell терминале: python .\yandex_direct_analyzer.py --input .\data --output .\out\report.xlsx
+В начале Readme напиши команду для запуска для powershell и для cmd терминалов
+
+---
+
+## ТВОЯ ЗАДАЧА
+1. Проанализируй код и запрос пользователя.
+2. Определи, какие файлы нужно создать, изменить или удалить.
+3. Верни ответ строго в формате XML, заключённый в блок ```xml … ```.
+4. Для всех файлов с действием `write` указывай **полное содержимое файла**, без каких-либо сокращений.
+
+---
+
+## ФОРМАТ ОТВЕТА
+
+```xml
+<response>
+    <file_change action="write" path="frontend/src/components/ComplexComponent.tsx">
+<![CDATA[
+...ПОЛНЫЙ, ОТРЕФАКТОРЕННЫЙ КОД...
