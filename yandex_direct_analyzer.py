@@ -267,12 +267,26 @@ def determine_campaign_type(campaign_name: str) -> str:
 
 def add_metrics(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
+    
+    # Убедимся, что необходимые колонки существуют
+    if "spend" not in df.columns:
+        df["spend"] = 0.0
+    if "clicks" not in df.columns:
+        df["clicks"] = 0.0
+    if "conversions" not in df.columns:
+        df["conversions"] = 0.0
+    if "impressions" not in df.columns:
+        df["impressions"] = 0.0
+    
     df["cpc"] = np.where(df["clicks"] > 0, df["spend"] / df["clicks"], np.nan)
     df["cpa"] = np.where(df["conversions"] > 0, df["spend"] / df["conversions"], np.nan)
     df["cr"] = np.where(df["clicks"] > 0, df["conversions"] / df["clicks"], np.nan)
     df["ctr"] = np.where(df["impressions"] > 0, df["clicks"] / df["impressions"], np.nan)
-    # Добавляем тип кампании
-    df["campaign_type"] = df["campaign"].apply(determine_campaign_type)
+    
+    # Добавляем тип кампании, если есть колонка campaign
+    if "campaign" in df.columns:
+        df["campaign_type"] = df["campaign"].apply(determine_campaign_type)
+    
     return df
 
 
@@ -280,15 +294,19 @@ def summarize(df: pd.DataFrame, dim: str, by_campaign: bool = False) -> pd.DataF
     """Агрегация данных по измерению, опционально с группировкой по кампаниям."""
     group_cols = ["campaign", dim] if by_campaign else [dim]
     
-    # Для площадок добавляем информацию о возможности блокировки
+    # Базовые метрики
     agg_dict = {
         "spend": ("spend", "sum"),
         "clicks": ("clicks", "sum"),
         "conversions": ("conversions", "sum"),
         "impressions": ("impressions", "sum"),
-        "bounce_rate": ("bounce_rate", "mean"),
-        "depth": ("depth", "mean"),
     }
+    
+    # Добавляем опциональные метрики, если они есть
+    if "bounce_rate" in df.columns:
+        agg_dict["bounce_rate"] = ("bounce_rate", "mean")
+    if "depth" in df.columns:
+        agg_dict["depth"] = ("depth", "mean")
     
     # Если это площадки и есть колонка can_block, добавляем её
     if dim == "placement" and "can_block" in df.columns:
@@ -316,14 +334,21 @@ def summarize_gender_age(df: pd.DataFrame) -> pd.DataFrame:
     df_copy = df.copy()
     df_copy["gender_age"] = df_copy["gender"].astype(str) + " " + df_copy["age"].astype(str)
     
-    agg = df_copy.groupby(["campaign", "gender_age"], dropna=False).agg(
-        spend=("spend", "sum"),
-        clicks=("clicks", "sum"),
-        conversions=("conversions", "sum"),
-        impressions=("impressions", "sum"),
-        bounce_rate=("bounce_rate", "mean"),
-        depth=("depth", "mean"),
-    ).reset_index()
+    # Базовые метрики
+    agg_dict = {
+        "spend": ("spend", "sum"),
+        "clicks": ("clicks", "sum"),
+        "conversions": ("conversions", "sum"),
+        "impressions": ("impressions", "sum"),
+    }
+    
+    # Добавляем опциональные метрики
+    if "bounce_rate" in df_copy.columns:
+        agg_dict["bounce_rate"] = ("bounce_rate", "mean")
+    if "depth" in df_copy.columns:
+        agg_dict["depth"] = ("depth", "mean")
+    
+    agg = df_copy.groupby(["campaign", "gender_age"], dropna=False).agg(**agg_dict).reset_index()
     
     agg["cpc"] = np.where(agg["clicks"] > 0, agg["spend"] / agg["clicks"], np.nan)
     agg["cpa"] = np.where(agg["conversions"] > 0, agg["spend"] / agg["conversions"], np.nan)
@@ -385,14 +410,21 @@ def campaign_recommendations(
     min_clicks: int,
     min_spend: float,
     available_dims: set,
+    additional_slices: dict = None,
 ) -> pd.DataFrame:
+    """Генерация рекомендаций по кампаниям с учетом всех измерений."""
     account_cpa = overall_metrics(df)["cpa"]
     rows = []
+    
+    if additional_slices is None:
+        additional_slices = {}
+    
     for _, row in campaign_summary.iterrows():
         camp = row["campaign"]
         part = df[df["campaign"] == camp].copy()
         recs = []
 
+        # Обрабатываем измерения из основного файла
         for dim, label in [
             ("device", "устройствам"),
             ("gender", "полу"),
@@ -400,18 +432,97 @@ def campaign_recommendations(
             ("targeting_type", "типу условия показа"),
             ("placement", "площадкам"),
         ]:
-            # Строим рекомендации только по тем измерениям, которые реально присутствуют в отчёте.
             if dim not in available_dims:
                 continue
 
             s = summarize(part, dim)
             good, bad = best_and_worst(s, min_clicks=min_clicks, min_spend=min_spend)
+            
+            # Исключаем из "хороших" те, что попали в "плохие"
+            if not good.empty and not bad.empty:
+                bad_set = set(bad[dim].astype(str).tolist())
+                good = good[~good[dim].astype(str).isin(bad_set)]
+            
             if not good.empty:
                 good_names = ", ".join(good[dim].astype(str).head(3).tolist())
                 recs.append(f"Усилить по {label}: {good_names}")
             if not bad.empty:
                 bad_names = ", ".join(bad[dim].astype(str).head(3).tolist())
                 recs.append(f"Сократить по {label}: {bad_names}")
+        
+        # Обрабатываем дополнительные измерения
+        # Регионы
+        if "regions" in additional_slices:
+            region_data = additional_slices["regions"]
+            camp_regions = region_data[region_data["campaign"] == camp]
+            if not camp_regions.empty:
+                good, bad = best_and_worst(camp_regions.rename(columns={"region": "_dim"}), 
+                                          min_clicks=min_clicks, min_spend=min_spend)
+                # Переименовываем обратно
+                if not good.empty:
+                    good = good.rename(columns={"_dim": "region"})
+                if not bad.empty:
+                    bad = bad.rename(columns={"_dim": "region"})
+                
+                # Исключаем дубликаты
+                if not good.empty and not bad.empty:
+                    bad_set = set(bad["region"].astype(str).tolist())
+                    good = good[~good["region"].astype(str).isin(bad_set)]
+                
+                if not good.empty:
+                    good_names = ", ".join(good["region"].astype(str).head(3).tolist())
+                    recs.append(f"Усилить по регионам: {good_names}")
+                if not bad.empty:
+                    bad_names = ", ".join(bad["region"].astype(str).head(3).tolist())
+                    recs.append(f"Сократить по регионам: {bad_names}")
+        
+        # Пол и возраст
+        if "gender_age" in additional_slices:
+            ga_data = additional_slices["gender_age"]
+            camp_ga = ga_data[ga_data["campaign"] == camp]
+            if not camp_ga.empty:
+                good, bad = best_and_worst(camp_ga.rename(columns={"gender_age": "_dim"}), 
+                                          min_clicks=min_clicks, min_spend=min_spend)
+                if not good.empty:
+                    good = good.rename(columns={"_dim": "gender_age"})
+                if not bad.empty:
+                    bad = bad.rename(columns={"_dim": "gender_age"})
+                
+                # Исключаем дубликаты
+                if not good.empty and not bad.empty:
+                    bad_set = set(bad["gender_age"].astype(str).tolist())
+                    good = good[~good["gender_age"].astype(str).isin(bad_set)]
+                
+                if not good.empty:
+                    good_names = ", ".join(good["gender_age"].astype(str).head(3).tolist())
+                    recs.append(f"Усилить по полу и возрасту: {good_names}")
+                if not bad.empty:
+                    bad_names = ", ".join(bad["gender_age"].astype(str).head(3).tolist())
+                    recs.append(f"Сократить по полу и возрасту: {bad_names}")
+        
+        # Поисковые фразы
+        if "phrases" in additional_slices:
+            phrase_data = additional_slices["phrases"]
+            camp_phrases = phrase_data[phrase_data["campaign"] == camp]
+            if not camp_phrases.empty:
+                good, bad = best_and_worst(camp_phrases.rename(columns={"phrase": "_dim"}), 
+                                          min_clicks=min_clicks, min_spend=min_spend)
+                if not good.empty:
+                    good = good.rename(columns={"_dim": "phrase"})
+                if not bad.empty:
+                    bad = bad.rename(columns={"_dim": "phrase"})
+                
+                # Исключаем дубликаты
+                if not good.empty and not bad.empty:
+                    bad_set = set(bad["phrase"].astype(str).tolist())
+                    good = good[~good["phrase"].astype(str).isin(bad_set)]
+                
+                if not good.empty:
+                    good_names = ", ".join(good["phrase"].astype(str).head(5).tolist())
+                    recs.append(f"Усилить по ключевым фразам: {good_names}")
+                if not bad.empty:
+                    bad_names = ", ".join(bad["phrase"].astype(str).head(5).tolist())
+                    recs.append(f"Сократить по ключевым фразам: {bad_names}")
 
         status = "усилить"
         if pd.notna(row["cpa"]) and pd.notna(account_cpa):
@@ -429,7 +540,7 @@ def campaign_recommendations(
             "cpa": row["cpa"],
             "cr": row["cr"],
             "status": status,
-            "recommendations": " | ".join(recs[:10]) if recs else "Недостаточно данных для рекомендаций",
+            "recommendations": " | ".join(recs) if recs else "Недостаточно данных для рекомендаций",
         })
     return pd.DataFrame(rows).sort_values(["conversions", "spend"], ascending=[False, False])
 
@@ -637,6 +748,8 @@ def build_excel(output_path: Path, totals: Dict[str, float], campaign_summary: p
         "ad_group": "Группа",
         "title": "Заголовок",
         "image": "Изображение",
+        "regions": "Регионы",
+        "phrases": "Поисковые фразы",
     }
     
     for key, label in dimension_labels.items():
@@ -676,32 +789,118 @@ def main():
         print(f"  Обработано кампаний: {df['campaign'].nunique()}")
         print()
         
-        # 3. Загрузка дополнительных файлов (опционально)
-        additional_data = {}
+        # 3. Загрузка и обработка дополнительных файлов (опционально)
+        additional_slices = {}
         
         if files["regions"]:
             print(f"Шаг 3a: Загрузка данных по регионам...")
             try:
                 df_regions = load_data_file(files["regions"], ["Название кампании", "Регион"])
-                additional_data["regions"] = df_regions
+                # Маппинг и подготовка данных по регионам
+                mapping_regions = {
+                    "campaign": "Название кампании",
+                    "region": "Регион местонахождения" if "Регион местонахождения" in df_regions.columns else "Регион",
+                    "spend": "Расход, ₽" if "Расход, ₽" in df_regions.columns else "Расход",
+                    "clicks": "Клики",
+                    "conversions": "Конверсии"
+                }
+                df_regions_prep = pd.DataFrame()
+                for key, col in mapping_regions.items():
+                    if col in df_regions.columns:
+                        df_regions_prep[key] = df_regions[col]
+                
+                # Очистка и подготовка
+                for col in ["spend", "clicks", "conversions"]:
+                    if col in df_regions_prep.columns:
+                        df_regions_prep[col] = clean_numeric(df_regions_prep[col])
+                
+                df_regions_prep["campaign"] = df_regions_prep["campaign"].fillna("Не указано").astype(str).str.strip()
+                df_regions_prep["region"] = df_regions_prep["region"].fillna("Не указано").astype(str).str.strip()
+                
+                # Удаление строк "Итого"
+                df_regions_prep = df_regions_prep[df_regions_prep["campaign"].astype(str).str.lower() != "итого"]
+                df_regions_prep = df_regions_prep[df_regions_prep["campaign"] != ""]
+                
+                # Расчет метрик и агрегация
+                df_regions_prep = add_metrics(df_regions_prep)
+                additional_slices["regions"] = summarize(df_regions_prep, "region", by_campaign=True)
+                print(f"  [OK] Обработано регионов: {df_regions_prep['region'].nunique()}")
             except Exception as e:
-                print(f"  Ошибка загрузки regions: {e}")
+                print(f"  [ОШИБКА] Не удалось обработать regions: {e}")
         
         if files["polvozrast"]:
             print(f"Шаг 3b: Загрузка данных по полу и возрасту...")
             try:
                 df_polvozrast = load_data_file(files["polvozrast"], ["Название кампании", "Пол", "Возраст"])
-                additional_data["polvozrast"] = df_polvozrast
+                # Маппинг и подготовка данных
+                mapping_polvozrast = {
+                    "campaign": "Название кампании",
+                    "gender": "Пол",
+                    "age": "Возраст",
+                    "spend": "Расход, ₽" if "Расход, ₽" in df_polvozrast.columns else "Расход",
+                    "clicks": "Клики",
+                    "conversions": "Конверсии"
+                }
+                df_polvozrast_prep = pd.DataFrame()
+                for key, col in mapping_polvozrast.items():
+                    if col in df_polvozrast.columns:
+                        df_polvozrast_prep[key] = df_polvozrast[col]
+                
+                # Очистка и подготовка
+                for col in ["spend", "clicks", "conversions"]:
+                    if col in df_polvozrast_prep.columns:
+                        df_polvozrast_prep[col] = clean_numeric(df_polvozrast_prep[col])
+                
+                df_polvozrast_prep["campaign"] = df_polvozrast_prep["campaign"].fillna("Не указано").astype(str).str.strip()
+                df_polvozrast_prep["gender"] = df_polvozrast_prep["gender"].fillna("Не указано").astype(str).str.strip()
+                df_polvozrast_prep["age"] = df_polvozrast_prep["age"].fillna("Не указано").astype(str).str.strip()
+                
+                # Удаление строк "Итого"
+                df_polvozrast_prep = df_polvozrast_prep[df_polvozrast_prep["campaign"].astype(str).str.lower() != "итого"]
+                df_polvozrast_prep = df_polvozrast_prep[df_polvozrast_prep["campaign"] != ""]
+                
+                # Расчет метрик и создание объединенного измерения
+                df_polvozrast_prep = add_metrics(df_polvozrast_prep)
+                additional_slices["gender_age"] = summarize_gender_age(df_polvozrast_prep)
+                print(f"  [OK] Обработано комбинаций пол+возраст: {len(additional_slices['gender_age'])}")
             except Exception as e:
-                print(f"  Ошибка загрузки polvozrast: {e}")
+                print(f"  [ОШИБКА] Не удалось обработать polvozrast: {e}")
         
         if files["pfrases"]:
             print(f"Шаг 3c: Загрузка данных по поисковым фразам...")
             try:
                 df_pfrases = load_data_file(files["pfrases"], ["Название кампании", "Ключевая фраза"])
-                additional_data["pfrases"] = df_pfrases
+                # Маппинг и подготовка данных
+                mapping_pfrases = {
+                    "campaign": "Название кампании",
+                    "phrase": "Ключевая фраза",
+                    "spend": "Расход, ₽" if "Расход, ₽" in df_pfrases.columns else "Расход",
+                    "clicks": "Клики",
+                    "conversions": "Конверсии"
+                }
+                df_pfrases_prep = pd.DataFrame()
+                for key, col in mapping_pfrases.items():
+                    if col in df_pfrases.columns:
+                        df_pfrases_prep[key] = df_pfrases[col]
+                
+                # Очистка и подготовка
+                for col in ["spend", "clicks", "conversions"]:
+                    if col in df_pfrases_prep.columns:
+                        df_pfrases_prep[col] = clean_numeric(df_pfrases_prep[col])
+                
+                df_pfrases_prep["campaign"] = df_pfrases_prep["campaign"].fillna("Не указано").astype(str).str.strip()
+                df_pfrases_prep["phrase"] = df_pfrases_prep["phrase"].fillna("Не указано").astype(str).str.strip()
+                
+                # Удаление строк "Итого"
+                df_pfrases_prep = df_pfrases_prep[df_pfrases_prep["campaign"].astype(str).str.lower() != "итого"]
+                df_pfrases_prep = df_pfrases_prep[df_pfrases_prep["campaign"] != ""]
+                
+                # Расчет метрик и агрегация
+                df_pfrases_prep = add_metrics(df_pfrases_prep)
+                additional_slices["phrases"] = summarize(df_pfrases_prep, "phrase", by_campaign=True)
+                print(f"  [OK] Обработано фраз: {df_pfrases_prep['phrase'].nunique()}")
             except Exception as e:
-                print(f"  Ошибка загрузки pfrases: {e}")
+                print(f"  [ОШИБКА] Не удалось обработать pfrases: {e}")
         print()
         
         # 4. Расчет общих метрик
@@ -712,7 +911,7 @@ def main():
         # available_dims: измерения из основного файла
         available_dims = set(mapping.keys())
         
-        # 5. Создание срезов данных
+        # 5. Создание срезов данных из основного файла
         print("Шаг 5: Создание аналитических срезов...")
         slices = {}
         
@@ -725,10 +924,10 @@ def main():
             slices["device"] = summarize(df, "device", by_campaign=True)
             print("  [OK] Устройство (по кампаниям)")
         
-        # Пол и возраст (объединенные)
+        # Пол и возраст (объединенные) - только если есть в основном файле
         if "gender" in available_dims and "age" in available_dims:
             slices["gender_age"] = summarize_gender_age(df)
-            print("  [OK] Пол и возраст (объединенные)")
+            print("  [OK] Пол и возраст из основного файла (по кампаниям)")
         
         # Тип условия показа (по кампаниям)
         if "targeting_type" in available_dims:
@@ -754,6 +953,19 @@ def main():
         if "image" in available_dims:
             slices["image"] = summarize(df, "image", by_campaign=True)
             print("  [OK] Изображение (по кампаниям)")
+        
+        # Добавление срезов из дополнительных файлов
+        for key, data in additional_slices.items():
+            if key == "gender_age" and "gender_age" not in slices:
+                # Используем данные из отдельного файла, если в основном их нет
+                slices[key] = data
+                print(f"  [OK] Пол и возраст из отдельного файла (по кампаниям)")
+            elif key not in slices:
+                slices[key] = data
+                if key == "regions":
+                    print(f"  [OK] Регионы (по кампаниям)")
+                elif key == "phrases":
+                    print(f"  [OK] Поисковые фразы (по кампаниям)")
         print()
         
         # 6. Генерация рекомендаций
@@ -764,6 +976,7 @@ def main():
             MIN_CLICKS,
             MIN_SPEND,
             available_dims=available_dims,
+            additional_slices=additional_slices,
         )
         print()
         
