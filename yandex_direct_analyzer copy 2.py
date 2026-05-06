@@ -209,32 +209,17 @@ def find_site_files(site_name: str, data_folder: str) -> Dict[str, Optional[Path
     return found_files
 
 
-# def find_header_row(df: pd.DataFrame, required_columns: List[str]) -> int:
-#     """Находит строку с заголовками таблицы."""
-#     for idx in range(min(20, len(df))):
-#         row_values = df.iloc[idx].astype(str).str.lower().tolist()
-#         matches = sum(
-#             1 for col in required_columns
-#             if any(col.lower() in str(val).lower() for val in row_values)
-#         )
-#         if matches >= len(required_columns) * 0.6:
-#             return idx
-#     return 0
-
 def find_header_row(df: pd.DataFrame, required_columns: List[str]) -> int:
     """Находит строку с заголовками таблицы."""
-    best_row = 0
-    best_score = 0
-    # Нормализуем кандидатов
-    candidates_norm = [normalize_text(c) for c in required_columns]
     for idx in range(min(20, len(df))):
-        row_values = [normalize_text(str(v)) for v in df.iloc[idx].tolist()]
-        # Считаем точные совпадения ячеек с кандидатами
-        score = sum(1 for c in candidates_norm if c in row_values)
-        if score > best_score:
-            best_score = score
-            best_row = idx
-    return best_row if best_score >= 2 else 0
+        row_values = df.iloc[idx].astype(str).str.lower().tolist()
+        matches = sum(
+            1 for col in required_columns
+            if any(col.lower() in str(val).lower() for val in row_values)
+        )
+        if matches >= len(required_columns) * 0.6:
+            return idx
+    return 0
 
 
 def load_data_file(path: Path, required_cols: List[str]) -> pd.DataFrame:
@@ -322,37 +307,20 @@ def load_and_prepare_extra(path: Path, required_keys: List[str]) -> pd.DataFrame
 
 def determine_campaign_type(campaign_name: str) -> str:
     """Определяет тип кампании по её названию."""
-    name       = str(campaign_name)
+    name = str(campaign_name)
     name_lower = name.lower()
 
-    # Динамическая — наивысший приоритет (перекрывает Поиск и др.)
     if "динамическ" in name_lower:
         return "Динамическая"
-
-    # РСЯ
-    if "рся" in name_lower:
-        return "РСЯ"
-
-    # Смарт-баннеры — содержит и "смарт" и "баннер"
-    if "смарт" in name_lower and "баннер" in name_lower:
+    if "МК " in name:
+        return "Мастер кампаний"
+    if "смарт" in name_lower:
         return "Смарт-баннеры"
-
-    # БНП — содержит "поиск" и "баннер", или начинается с "бнп "
-    if ("поиск" in name_lower and "баннер" in name_lower) or name_lower.startswith("бнп "):
-        return "БНП"
-
-    # Товарная
     if "товарн" in name_lower:
         return "Товарная"
-
-    # Мастер кампаний — (содержит "мастер" и "кампан", не содержит "товарн")
-    #                    или начинается с "МК " (регистрозависимо)
-    if ("мастер" in name_lower and "кампан" in name_lower and "товарн" not in name_lower) \
-            or name.startswith("МК "):
-        return "Мастер кампаний"
-
-    # Поиск — содержит "поиск", не содержит "баннер", не содержит "динамическ"
-    if "поиск" in name_lower and "баннер" not in name_lower and "динамическ" not in name_lower:
+    if "рся" in name_lower:
+        return "РСЯ"
+    if "поиск" in name_lower:
         return "Поиск"
 
     return "Не определен"
