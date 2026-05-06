@@ -19,7 +19,7 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 
 # ==================== НАСТРОЙКИ ====================
 # Заголовок для отчета (выводится в ячейке A1 на каждой вкладке)
-REPORT_TITLE = "Отчет по проекту ОПОРА за период 1 - 31 марта 2026г."
+REPORT_TITLE = "Отчет по проекту Опора за период 1 - 31 марта 2026г."
 # Название сайта для поиска файлов (используется в именах файлов)
 SITE_NAME = "opora"
 # Папка с исходными данными
@@ -881,7 +881,8 @@ def build_excel(
         ("title",           "Заголовок",               "Заголовок (по кампаниям)"),
         ("image",           "Изображение",             "Изображение (по кампаниям)"),
         ("regions",         "Регионы",                 "Регионы (по кампаниям)"),
-        ("phrases",         "Поисковые фразы",         "Поисковые фразы (по кампаниям)"),
+        ("regions_all",     "Регионы-все-камп",        "Регионы по всем кампаниям"),
+        ("phrases",         "Поисковые фразы",        "Поисковые фразы (по кампаниям)"),
     ]
 
     for key, sheet_name, sheet_title in ordered_keys:
@@ -928,7 +929,8 @@ def main():
                 # Удаляем строки «Итого»
                 df_reg = df_reg[~df_reg["campaign"].str.lower().str.contains("итого", na=False)]
                 df_reg = df_reg[df_reg["campaign"].str.strip() != ""]
-                additional_slices["regions"] = summarize(df_reg, "region", by_campaign=True)
+                additional_slices["regions"]     = summarize(df_reg, "region", by_campaign=True)
+                additional_slices["regions_all"] = summarize(df_reg, "region", by_campaign=False)
                 print(f"  [OK] Регионов: {df_reg['region'].nunique()}")
             except Exception as e:
                 print(f"  [ОШИБКА] regions: {e}")
